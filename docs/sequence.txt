@@ -1,0 +1,80 @@
+title SongsMS - Get All Albums
+
+actor Client
+participant Gateway
+participant Discovery
+
+participantgroup #lightyellow **Auth-Service**
+participant AuthController
+participant AuthService
+participant AuthRepository
+participant AuthDatabase
+end
+
+participantgroup #lightblue **Albums-Service**
+participant AlbumsController
+participant AlbumsService
+participant AlbumsRepository
+participant AlbumsDatabase
+end
+
+participantgroup #lightgreen **Songs-Service**
+participant SongsController
+participant SongsService
+participant SongsRepository
+participant SongsDatabase
+end
+
+group Login User
+Client->Gateway:POST user-credentials
+Gateway->Discovery:Get Auth-Service URL
+Discovery-->Gateway:Return URL
+Gateway->AuthController:Forward POST Request
+AuthController->AuthService:authenticateUser()
+AuthService->AuthRepository:Set new Token
+AuthRepository->AuthDatabase:Save token in User
+AuthService-->AuthController:Return Token
+AuthController-->Client:Answer with Token
+end
+
+group Authenticate token
+Client->Gateway:GET all Albums
+Gateway->Discovery: Get Albums-Service URL
+Discovery-->Gateway:Return URL
+Gateway->AlbumsController:Forward GET Request
+AlbumsController->Discovery:Get Auth-Service URL
+Discovery-->AlbumsController:Return URL
+AlbumsController->AuthController:POST token
+AuthController->AuthService:getUserByToken()
+AuthService->AuthRepository:findByToken()
+AuthRepository->AuthDatabase:Find User with token
+AuthDatabase-->AuthRepository:Return User
+AuthRepository-->AuthService:Return User
+AuthService-->AuthController:Return User
+AuthController-->AlbumsController:Return userId
+end 
+
+group Get Albums
+AlbumsController->AlbumsService:getAll()
+AlbumsService->AlbumsRepository:findAll()
+AlbumsRepository->AlbumsDatabase:Find all Albums
+AlbumsDatabase-->AlbumsRepository:Return List of Albums
+AlbumsRepository-->AlbumsService:Return List of Albums
+AlbumsService-->AlbumsController:Return List of Albums
+end
+
+loop Get Song Metadata for each Song
+AlbumsController->Discovery:Get Songs-Service URL
+Discovery-->AlbumsController:Return URL
+AlbumsController->SongsController:GET Song with Id
+SongsController->SongsService:getSongById()
+SongsService->SongsRepository:findById()
+SongsRepository->SongsDatabase:Find Song
+SongsDatabase-->SongsRepository:Return Song
+SongsRepository-->SongsService:Return Song
+SongsService-->SongsController:Return Song
+SongsController-->AlbumsController:Return Song
+AlbumsController->AlbumsController:Set Metadata
+end
+
+AlbumsController-->Client:Return List of Albums
